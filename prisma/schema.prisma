@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model reading_test {
+  reading_test_id Int             @id @default(autoincrement())
+  time            String?         @db.VarChar(10)
+  level           String?         @db.VarChar(50)
+  name            String?         @db.VarChar(255)
+  band            String?         @db.VarChar(10)
+  time_option     String?         @db.VarChar(50)
+  description     String?         @db.Text
+  total_question  String?         @db.VarChar(10)
+  total_correct   String?         @db.VarChar(10)
+  reading_items   reading_items[]
+}
+
+model reading_items {
+  reading_items_id  Int                @id @default(autoincrement())
+  reading_test_id   Int?
+  title             String?            @db.VarChar(255)
+  title_description String?            @db.Text
+  header_content    String?            @db.Text
+  content           String?            @db.Text
+  reading_test      reading_test?      @relation(fields: [reading_test_id], references: [reading_test_id], onDelete: Cascade, onUpdate: NoAction, map: "reading_items_ibfk_1")
+  reading_question  reading_question[]
+
+  @@index([reading_test_id], map: "reading_test_id")
+}
+
+model reading_question {
+  reading_question_id      Int            @id @default(autoincrement())
+  reading_items_id         Int?
+  question_number          String?        @db.VarChar(10)
+  type_question            String?        @db.VarChar(50)
+  question_multiple_choice String?        @db.Text
+  question_par             String?        @db.Text
+  question_select          String?        @db.Text
+  options                  String?        @db.Text
+  answer_multiple_choice   String?        @db.VarChar(255)
+  answer_par               String?        @db.Text
+  answer_select            String?        @db.VarChar(255)
+  result                   String?        @db.VarChar(50)
+  explanation              String?        @db.Text
+  gap_count                String?        @db.VarChar(10)
+  reading_items            reading_items? @relation(fields: [reading_items_id], references: [reading_items_id], onDelete: Cascade, onUpdate: NoAction, map: "reading_question_ibfk_1")
+
+  @@index([reading_items_id], map: "reading_items_id")
+}
+
+model assessment_test {
+  id          Int               @id @default(autoincrement())
+  name        String
+  level       String
+  time        Int
+  description String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  parts       AssessmentPart[]
+}
+
+model AssessmentPart {
+  id           Int              @id @default(autoincrement())
+  assessmentId Int
+  title        String
+  instructions String?
+  order        Int
+  assessment   assessment_test  @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  groups       QuestionGroup[]
+}
+
+model QuestionGroup {
+  id            Int               @id @default(autoincrement())
+  partId        Int
+  questionType  String
+  heading       String
+  startNumber   Int
+  endNumber     Int
+  part          AssessmentPart    @relation(fields: [partId], references: [id], onDelete: Cascade)
+  questions     AssessmentQuestion[]
+}
+
+model AssessmentQuestion {
+  id               Int               @id @default(autoincrement())
+  groupId          Int
+  questionText     String
+  options          String?  @db.Text          // ❗JSON string: '["A", "B", "C", "D"]'
+  correctAnswer    String
+  explanation      String?
+  type             String
+  paragraphHeading String?
+  group            QuestionGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+
+model user {
+  user_id       Int        @id @default(autoincrement())
+  user_name     String     @unique
+  full_name     String?
+  phone_number  String?    @unique
+  email         String     @unique(map: "email") @db.VarChar(255)
+  password      String     @db.VarChar(255)
+  active        Boolean    @default(true)
+  picture       String?    @db.VarChar(255)
+  level         String?    @db.VarChar(50)
+  band          String?    @db.VarChar(10)
+  role          user_role? @default(user)
+}
+
+enum user_role {
+  admin
+  user
+}
