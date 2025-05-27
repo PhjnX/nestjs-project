@@ -8,108 +8,178 @@ datasource db {
 }
 
 model reading_test {
-  reading_test_id Int             @id @default(autoincrement())
-  time            String?         @db.VarChar(10)
-  level           String?         @db.VarChar(50)
-  name            String?         @db.VarChar(255)
-  band            String?         @db.VarChar(10)
-  time_option     String?         @db.VarChar(50)
-  description     String?         @db.Text
-  total_question  String?         @db.VarChar(10)
-  total_correct   String?         @db.VarChar(10)
-  reading_items   reading_items[]
-}
-
-model reading_items {
-  reading_items_id  Int                @id @default(autoincrement())
-  reading_test_id   Int?
-  title             String?            @db.VarChar(255)
-  title_description String?            @db.Text
-  header_content    String?            @db.Text
-  content           String?            @db.Text
-  reading_test      reading_test?      @relation(fields: [reading_test_id], references: [reading_test_id], onDelete: Cascade, onUpdate: NoAction, map: "reading_items_ibfk_1")
-  reading_question  reading_question[]
-
-  @@index([reading_test_id], map: "reading_test_id")
+  id             Int              @id @default(autoincrement())
+  level          Int?
+  title          String?          @db.VarChar(255)
+  description    String?          @db.Text
+  order_num      Int?
+  time           Int?
+  reading_group  reading_group[]
+  reading_part   reading_part[]
+  reading_result reading_result[]
 }
 
 model reading_question {
-  reading_question_id      Int            @id @default(autoincrement())
-  reading_items_id         Int?
-  question_number          String?        @db.VarChar(10)
-  type_question            String?        @db.VarChar(50)
-  question_multiple_choice String?        @db.Text
-  question_par             String?        @db.Text
-  question_select          String?        @db.Text
-  options                  String?        @db.Text
-  answer_multiple_choice   String?        @db.VarChar(255)
-  answer_par               String?        @db.Text
-  answer_select            String?        @db.VarChar(255)
-  result                   String?        @db.VarChar(50)
-  explanation              String?        @db.Text
-  gap_count                String?        @db.VarChar(10)
-  reading_items            reading_items? @relation(fields: [reading_items_id], references: [reading_items_id], onDelete: Cascade, onUpdate: NoAction, map: "reading_question_ibfk_1")
+  id                    Int                     @id @default(autoincrement())
+  group_id              Int?
+  question_text         String?                 @db.Text
+  options               String?                 @db.Text
+  correct_answer        String?                 @db.Text
+  explanation           String?                 @db.Text
+  type                  String?                 @db.VarChar(50)
+  paragraph_heading     String?                 @db.VarChar(255)
+  line_reference        String?                 @db.VarChar(255)
+  show_answer           Boolean?                @default(true)
+  order_num             Int?
+  reading_group         reading_group?          @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reading_question_ibfk_1")
+  reading_result_detail reading_result_detail[]
 
-  @@index([reading_items_id], map: "reading_items_id")
+  @@index([group_id], map: "group_id")
 }
 
 model assessment_test {
-  id          Int               @id @default(autoincrement())
-  name        String
-  level       String
-  time        Int
-  description String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  parts       AssessmentPart[]
+  name           String
+  time           Int
+  description    String?
+  createdAt      DateTime            @default(now())
+  id             Int                 @id @default(autoincrement())
+  level          String
+  updatedAt      DateTime            @updatedAt
+  isTest         Boolean             @default(true)
+  totalQuestions Int                 @default(40)
+  parts          assessmentPart[]
+  results        assessment_result[]
 }
 
-model AssessmentPart {
-  id           Int              @id @default(autoincrement())
-  assessmentId Int
-  title        String
-  instructions String?
-  order        Int
-  assessment   assessment_test  @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  groups       QuestionGroup[]
+model assessmentPart {
+  id               Int             @id @default(autoincrement())
+  title            String
+  order            Int
+  instructions     String?
+  titleDescription String?
+  headerContent    String?         @db.Text
+  content          String?         @db.Text
+  assessmentId     Int
+  groups           QuestionGroup[]
+  assessment       assessment_test @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId], map: "assessmentPart_assessmentId_fkey")
 }
 
 model QuestionGroup {
-  id            Int               @id @default(autoincrement())
-  partId        Int
-  questionType  String
-  heading       String
-  startNumber   Int
-  endNumber     Int
-  part          AssessmentPart    @relation(fields: [partId], references: [id], onDelete: Cascade)
-  questions     AssessmentQuestion[]
+  id           Int                  @id @default(autoincrement())
+  partId       Int
+  questionType String
+  heading      String
+  startNumber  Int
+  endNumber    Int
+  questions    AssessmentQuestion[]
+  part         assessmentPart       @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId], map: "QuestionGroup_partId_fkey")
 }
 
 model AssessmentQuestion {
-  id               Int               @id @default(autoincrement())
+  id               Int           @id @default(autoincrement())
   groupId          Int
-  questionText     String
-  options          String?  @db.Text          // ❗JSON string: '["A", "B", "C", "D"]'
+  questionText     String        @db.Text
+  options          String?       @db.Text
   correctAnswer    String
   explanation      String?
   type             String
   paragraphHeading String?
-  group            QuestionGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  lineReference    String?
+  showAnswer       Boolean       @default(false)
+  group            QuestionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId], map: "AssessmentQuestion_groupId_fkey")
 }
 
+model assessment_result {
+  id             Int             @id @default(autoincrement())
+  userId         Int
+  assessmentId   Int
+  correctCount   Int
+  totalQuestions Int
+  bandScore      String
+  createdAt      DateTime        @default(now())
+  assessment     assessment_test @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  user           user            @relation(fields: [userId], references: [user_id], onDelete: Cascade)
+
+  @@index([assessmentId], map: "assessment_result_assessmentId_fkey")
+  @@index([userId], map: "assessment_result_userId_fkey")
+}
 
 model user {
-  user_id       Int        @id @default(autoincrement())
-  user_name     String     @unique
-  full_name     String?
-  phone_number  String?    @unique
-  email         String     @unique(map: "email") @db.VarChar(255)
-  password      String     @db.VarChar(255)
-  active        Boolean    @default(true)
-  picture       String?    @db.VarChar(255)
-  level         String?    @db.VarChar(50)
-  band          String?    @db.VarChar(10)
-  role          user_role? @default(user)
+  user_id        Int                 @id @default(autoincrement())
+  user_name      String              @unique
+  email          String              @unique(map: "email") @db.VarChar(255)
+  password       String              @db.VarChar(255)
+  active         Boolean             @default(true)
+  picture        String?             @db.VarChar(255)
+  level          String?             @db.VarChar(50)
+  band           String?             @db.VarChar(10)
+  role           user_role?          @default(user)
+  full_name      String?
+  phone_number   String?             @unique
+  results        assessment_result[]
+  reading_result reading_result[]
+}
+
+model reading_group {
+  id               Int                @id @default(autoincrement())
+  reading_test_id  Int?
+  heading          String?            @db.VarChar(255)
+  question_type    String?            @db.VarChar(50)
+  start_number     Int?
+  end_number       Int?
+  reading_part_id  Int?
+  reading_part     reading_part?      @relation(fields: [reading_part_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reading_part")
+  reading_test     reading_test?      @relation(fields: [reading_test_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reading_group_ibfk_1")
+  reading_question reading_question[]
+
+  @@index([reading_test_id], map: "reading_test_id")
+  @@index([reading_part_id], map: "fk_reading_part")
+}
+
+model reading_result {
+  id                    Int                     @id @default(autoincrement())
+  user_id               Int?
+  reading_test_id       Int?
+  user                  user?                   @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "reading_result_ibfk_1")
+  reading_test          reading_test?           @relation(fields: [reading_test_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reading_result_ibfk_2")
+  reading_result_detail reading_result_detail[]
+
+  @@index([reading_test_id], map: "reading_test_id")
+  @@index([user_id], map: "user_id")
+}
+
+model reading_result_detail {
+  id               Int               @id @default(autoincrement())
+  result_id        Int?
+  question_id      Int?
+  user_answer      String?           @db.Text
+  is_correct       Boolean?
+  reading_result   reading_result?   @relation(fields: [result_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reading_result_detail_ibfk_1")
+  reading_question reading_question? @relation(fields: [question_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reading_result_detail_ibfk_2")
+
+  @@index([question_id], map: "question_id")
+  @@index([result_id], map: "result_id")
+}
+
+model reading_part {
+  id               Int             @id @default(autoincrement())
+  title            String?         @db.VarChar(255)
+  instructions     String?         @db.Text
+  order_num        Int?
+  reading_test_id  Int
+  titleDescription String?         @db.VarChar(255)
+  headerContent    String?         @db.Text
+  content          String?         @db.Text
+  reading_group    reading_group[]
+  reading_test     reading_test    @relation(fields: [reading_test_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reading_part_ibfk_1")
+
+  @@index([reading_test_id], map: "reading_test_id")
 }
 
 enum user_role {

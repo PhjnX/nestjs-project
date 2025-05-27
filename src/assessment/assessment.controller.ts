@@ -23,18 +23,18 @@ export class AssessmentController {
   }
 
   @Post(':id/parts')
-  createPart(@Param('id') assessmentId: number, @Body() dto: CreatePartDto) {
-    return this.assessmentService.createPart(+assessmentId, dto);
+  createPart(@Param('id') id: string, @Body() dto: CreatePartDto) {
+    return this.assessmentService.createPart(+id, dto);
   }
 
   @Post('parts/:partId/groups')
-  createGroup(@Param('partId') partId: number, @Body() dto: CreateGroupDto) {
+  createGroup(@Param('partId') partId: string, @Body() dto: CreateGroupDto) {
     return this.assessmentService.createGroup(+partId, dto);
   }
 
   @Post('groups/:groupId/questions')
   createQuestion(
-    @Param('groupId') groupId: number,
+    @Param('groupId') groupId: string,
     @Body() dto: CreateQuestionDto,
   ) {
     return this.assessmentService.createQuestion(+groupId, dto);
@@ -45,7 +45,6 @@ export class AssessmentController {
     return this.assessmentService.getAllAssessments();
   }
 
-  // 🔄 UPDATE
   @Put(':id')
   updateAssessment(@Param('id') id: string, @Body() dto: CreateAssessmentDto) {
     return this.assessmentService.updateAssessment(+id, dto);
@@ -66,7 +65,6 @@ export class AssessmentController {
     return this.assessmentService.updateQuestion(+id, dto);
   }
 
-  // ❌ DELETE
   @Delete(':id')
   deleteAssessment(@Param('id') id: string) {
     return this.assessmentService.deleteAssessment(+id);
@@ -85,5 +83,16 @@ export class AssessmentController {
   @Delete('questions/:id')
   deleteQuestion(@Param('id') id: string) {
     return this.assessmentService.deleteQuestion(+id);
+  }
+
+  @Post('submit')
+  submitAssessment(
+    @Body()
+    body: {
+      userId: number;
+      answers: { questionId: number; answer: string }[];
+    },
+  ) {
+    return this.assessmentService.submitAssessment(body.userId, body.answers);
   }
 }

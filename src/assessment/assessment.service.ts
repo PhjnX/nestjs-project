@@ -33,6 +33,23 @@ export class AssessmentService {
         instructions: dto.instructions,
         order: Number(dto.order),
         assessmentId: assessmentId,
+        titleDescription: dto.titleDescription,
+        headerContent: dto.headerContent,
+        content: dto.content,
+      },
+    });
+  }
+
+  async updatePart(id: number, dto: CreatePartDto) {
+    return this.prisma.assessmentPart.update({
+      where: { id },
+      data: {
+        title: dto.title,
+        instructions: dto.instructions,
+        order: Number(dto.order),
+        titleDescription: dto.titleDescription,
+        headerContent: dto.headerContent,
+        content: dto.content,
       },
     });
   }
@@ -60,12 +77,12 @@ export class AssessmentService {
     return this.prisma.assessmentQuestion.create({
       data: {
         ...dto,
+        groupId,
         options: dto.options
           ? typeof dto.options === 'string'
             ? dto.options
             : JSON.stringify(dto.options)
           : undefined,
-        groupId,
       },
     });
   }
@@ -85,7 +102,7 @@ export class AssessmentService {
       },
     });
   }
-  // UPDATE
+
   async updateAssessment(id: number, dto: CreateAssessmentDto) {
     return this.prisma.assessment_test.update({
       where: { id },
@@ -96,20 +113,14 @@ export class AssessmentService {
     });
   }
 
-  async updatePart(id: number, dto: CreatePartDto) {
-    return this.prisma.assessmentPart.update({
-      where: { id },
-      data: {
-        ...dto,
-        order: Number(dto.order),
-      },
-    });
-  }
-
   async updateGroup(id: number, dto: CreateGroupDto) {
     return this.prisma.questionGroup.update({
       where: { id },
-      data: dto,
+      data: {
+        ...dto,
+        startNumber: Number(dto.startNumber),
+        endNumber: Number(dto.endNumber),
+      },
     });
   }
 
@@ -127,28 +138,100 @@ export class AssessmentService {
     });
   }
 
-  // DELETE
   async deleteAssessment(id: number) {
-    return this.prisma.assessment_test.delete({
-      where: { id },
-    });
+    return this.prisma.assessment_test.delete({ where: { id } });
   }
 
   async deletePart(id: number) {
-    return this.prisma.assessmentPart.delete({
-      where: { id },
-    });
+    return this.prisma.assessmentPart.delete({ where: { id } });
   }
 
   async deleteGroup(id: number) {
-    return this.prisma.questionGroup.delete({
-      where: { id },
-    });
+    return this.prisma.questionGroup.delete({ where: { id } });
   }
 
   async deleteQuestion(id: number) {
-    return this.prisma.assessmentQuestion.delete({
-      where: { id },
+    return this.prisma.assessmentQuestion.delete({ where: { id } });
+  }
+
+  async submitAssessment(
+    userId: number,
+    answers: { questionId: number; answer: string }[],
+  ) {
+    const questions = await this.prisma.assessmentQuestion.findMany({
+      where: {
+        id: { in: answers.map((a) => a.questionId) },
+      },
+      select: {
+        id: true,
+        correctAnswer: true,
+        type: true, // Thêm trường type để xác định loại câu hỏi
+        group: {
+          select: {
+            part: {
+              select: {
+                assessmentId: true,
+              },
+            },
+          },
+        },
+      },
     });
+
+    if (questions.length === 0) {
+      throw new BadRequestException('Không tìm thấy câu hỏi');
+    }
+
+    const assessmentId = questions[0].group.part.assessmentId;
+    let correctCount = 0;
+
+    for (const q of questions) {
+      const userAnswer = answers.find((a) => a.questionId === q.id)?.answer;
+      const ua = (userAnswer ?? '').trim().toLowerCase();
+      const ca = (q.correctAnswer ?? '').trim().toLowerCase();
+
+      if (!ua) continue;
+
+      if (q.type === 'input') {
+        // Hỗ trợ nhiều đáp án đúng, phân cách bằng dấu |
+        const correctList = ca.split('|').map((x) => x.trim());
+        if (correctList.includes(ua)) correctCount++;
+      } else {
+        // Các loại khác vẫn so sánh bình thường
+        if (ua === ca) correctCount++;
+      }
+    }
+
+    const bandScore = this.mapScoreToBand(correctCount);
+
+    await this.prisma.assessment_result.create({
+      data: {
+        userId,
+        assessmentId,
+        correctCount,
+        totalQuestions: questions.length,
+        bandScore,
+      },
+    });
+
+    return {
+      correctCount,
+      totalQuestions: questions.length,
+      bandScore,
+    };
+  }
+
+  private mapScoreToBand(score: number): string {
+    if (score >= 39) return '9.0';
+    if (score >= 37) return '8.5';
+    if (score >= 35) return '8.0';
+    if (score >= 33) return '7.5';
+    if (score >= 30) return '7.0';
+    if (score >= 27) return '6.5';
+    if (score >= 23) return '6.0';
+    if (score >= 19) return '5.5';
+    if (score >= 15) return '5.0';
+    if (score >= 12) return '4.5';
+    return '4.0';
   }
 }

@@ -1,19 +1,14 @@
-import { IsNotEmpty, IsOptional, IsString, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsNumber } from 'class-validator';
 
-export class CreatePartDto {
-  @IsNotEmpty()
+export class UpdatePartDto {
+  @IsOptional()
   @IsString()
-  title: string;
+  title?: string;
 
   @IsOptional()
   @IsString()
   instructions?: string;
 
-  @IsNotEmpty()
-  @IsNumber()
-  order: number;
-
-  // ✅ Thêm các field mới
   @IsOptional()
   @IsString()
   titleDescription?: string;
@@ -25,4 +20,8 @@ export class CreatePartDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @IsOptional()
+  @IsNumber()
+  order_num?: number;
 }

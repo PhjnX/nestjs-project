@@ -2,55 +2,120 @@ import {
   Controller,
   Get,
   Post,
-  Body,
-  Param,
-  Delete,
-  Req,
-  UseGuards,
   Put,
+  Delete,
+  Param,
+  Body,
+  Req,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ReadingService } from './reading.service';
-import { CreateReadingDto } from './dto/create-reading.dto';
-import { UpdateReadingDto } from './dto/update-reading.dto';
-import { AuthGuard } from '@nestjs/passport';
-import { RequestWithUser } from 'src/interfaces';
-import { ApiBearerAuth } from '@nestjs/swagger';
-@ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+import { CreateReadingTestDto } from './dto/create-reading-test.dto';
+import { CreatePartDto } from './dto/create-part.dto';
+import { UpdatePartDto } from './dto/update-part.dto';
+import { CreateReadingGroupDto } from './dto/create-reading-group.dto';
+import { CreateReadingQuestionDto } from './dto/create-reading-question.dto';
+import { SubmitReadingDto } from './dto/submit-reading.dto';
+import { UpdateReadingTestDto } from './dto/update-reading.dto';
+
 @Controller('reading')
-@UseGuards(AuthGuard('jwt'))
 export class ReadingController {
   constructor(private readonly readingService: ReadingService) {}
 
-  @Post('add')
-  create(
-    @Body() createReadingDto: CreateReadingDto,
-    @Req() req: RequestWithUser,
-  ) {
-    const userId = req.user.data.user_id;
-
-    return this.readingService.create(createReadingDto, userId);
-  }
-
+  // --------- READING TEST ---------
   @Get()
-  findAll(@Req() req: RequestWithUser) {
-    const userId = req.user.data.user_id;
-
-    return this.readingService.findAllByUser(userId);
+  async getAllTests() {
+    return this.readingService.getAllTests();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.readingService.findOne(+id);
+  @Post()
+  async createTest(@Body() dto: CreateReadingTestDto) {
+    return this.readingService.createTest(dto);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateReadingDto: UpdateReadingDto) {
-    return this.readingService.update(+id, updateReadingDto);
+  async updateTest(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateReadingTestDto,
+  ) {
+    return this.readingService.updateTest(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.readingService.remove(+id);
+  async deleteTest(@Param('id', ParseIntPipe) id: number) {
+    return this.readingService.deleteTest(id);
+  }
+
+  // --------- READING PART ---------
+  @Post(':readingTestId/parts')
+  async createPart(
+    @Param('readingTestId', ParseIntPipe) readingTestId: number,
+    @Body() dto: CreatePartDto,
+  ) {
+    return this.readingService.createPart(readingTestId, dto);
+  }
+
+  @Put('/parts/:id')
+  async updatePart(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePartDto,
+  ) {
+    return this.readingService.updatePart(id, dto);
+  }
+
+  @Delete('/parts/:id')
+  async deletePart(@Param('id', ParseIntPipe) id: number) {
+    return this.readingService.deletePart(id);
+  }
+
+  // --------- READING GROUP ---------
+  @Post('/parts/:partId/groups')
+  async createGroup(
+    @Param('partId', ParseIntPipe) partId: number,
+    @Body() dto: CreateReadingGroupDto,
+  ) {
+    return this.readingService.createGroup(partId, dto);
+  }
+
+  @Put('/groups/:id')
+  async updateGroup(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateReadingGroupDto,
+  ) {
+    return this.readingService.updateGroup(id, dto);
+  }
+
+  @Delete('/groups/:id')
+  async deleteGroup(@Param('id', ParseIntPipe) id: number) {
+    return this.readingService.deleteGroup(id);
+  }
+
+  // --------- READING QUESTION ---------
+  @Post('/groups/:groupId/questions')
+  async createQuestion(
+    @Param('groupId', ParseIntPipe) groupId: number,
+    @Body() dto: CreateReadingQuestionDto,
+  ) {
+    return this.readingService.createQuestion(groupId, dto);
+  }
+
+  @Put('/questions/:id')
+  async updateQuestion(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateReadingQuestionDto,
+  ) {
+    return this.readingService.updateQuestion(id, dto);
+  }
+
+  @Delete('/questions/:id')
+  async deleteQuestion(@Param('id', ParseIntPipe) id: number) {
+    return this.readingService.deleteQuestion(id);
+  }
+
+  // --------- SUBMIT ---------
+  @Post('/submit')
+  async submitReading(@Req() req, @Body() dto: SubmitReadingDto) {
+    const userId = req.user?.user_id || 1;
+    return this.readingService.submitReading(userId, dto);
   }
 }
